@@ -126,6 +126,8 @@ def main():
                         default=1e-3)
     parser.add_argument('--original-reward-weight', type=float, default=0.0,
                         help='define the weight of original reward with discriminator\'s value.')
+    parser.add_argument('--no-inventory', action='store_true',
+                        help='If specified, it converts the image of inventory to an empty image')
     parser.add_argument('--pretrain', action='store_true')
 
     args = parser.parse_args()
@@ -167,7 +169,10 @@ def _main(args):
         if args.gray_scale:
             env = GrayScaleWrapper(env, dict_space_key='pov')
         if args.env.startswith('MineRLObtain'):
-            env = UnifiedObservationWrapper(env)
+            if args.no_inventory:
+                env = ObtainPoVWrapper(env)
+            else:
+                env = UnifiedObservationWrapper(env)
         elif args.env.startswith('MineRLNavigate'):
             env = PoVWithCompassAngleWrapper(env)
         else:
@@ -257,8 +262,12 @@ def _main(args):
     # ================ Set up Expert dataset ================
     logger.info('Loading expert dataset...')
     if args.env.startswith('MineRLObtain'):
-        observation_converter = generate_unified_observation_converter(
-            grayscale=args.gray_scale)
+        if args.no_inventory:
+            observation_converter = generate_pov_converter(
+                grayscale=args.gray_scale)
+        else:
+            observation_converter = generate_unified_observation_converter(
+                grayscale=args.gray_scale)
     elif args.env.startswith('MineRLNavigate'):
         observation_converter = generate_pov_with_compass_converter(
             grayscale=args.gray_scale)
